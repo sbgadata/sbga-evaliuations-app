@@ -1,560 +1,627 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Evaluación</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <meta name="color-scheme" content="light">
-    <style>
-        .scroll-smooth {
-            scroll-behavior: smooth;
-        }
-
-        .no-tap-highlight {
-            -webkit-tap-highlight-color: transparent;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Evaluación</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light">
+  <style>
+    .scroll-smooth { scroll-behavior: smooth; }
+    .no-tap-highlight { -webkit-tap-highlight-color: transparent; }
+  </style>
 </head>
-
 <body class="bg-white text-gray-800 antialiased no-tap-highlight">
-    <!-- Barra superior con progreso y cronómetro -->
-    <header class="sticky top-0 z-40 border-b bg-white/85 backdrop-blur">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-            <div class="flex-1">
-                <div class="flex items-center justify-between gap-4">
-                    <div class="text-sm text-gray-600">
-                        <span id="answeredCount">0</span>/<span id="totalCount">0</span> respondidas
-                    </div>
-                    <div class="hidden sm:flex items-center gap-2 text-sm">
-                        <span class="inline-flex items-center gap-1"><span
-                                class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block"></span>Sin responder</span>
-                        <span class="inline-flex items-center gap-1"><span
-                                class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>Respondida</span>
-                        <span class="inline-flex items-center gap-1"><span
-                                class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Marcada</span>
-                    </div>
-                    <div class="font-medium tabular-nums" aria-live="polite">⏱️ <span id="timer">00:00:00</span></div>
-                </div>
-                <div class="mt-2 h-2 w-full bg-gray-100 rounded-full overflow-hidden" aria-label="Barra de progreso">
-                    <div id="progressBar" class="h-full bg-gray-900 w-0 transition-[width] duration-300"></div>
-                </div>
-            </div>
-            <button id="toggleSidebarBtn" class="sm:hidden shrink-0 px-3 py-2 rounded-lg border text-sm"
-                aria-expanded="false" aria-controls="sidebar">Resumen</button>
+  <!-- Barra superior con progreso y cronómetro -->
+  <header class="sticky top-0 z-40 border-b bg-white/85 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+      <div class="flex-1">
+        <div class="flex items-center justify-between gap-4">
+          <div class="text-sm text-gray-600">
+            <span id="answeredCount">0</span>/<span id="totalCount">0</span> respondidas
+          </div>
+          <div class="hidden sm:flex items-center gap-2 text-sm">
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block"></span>Sin responder</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>Respondida</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Marcada</span>
+          </div>
+          <div class="font-medium tabular-nums" aria-live="polite">⏳ <span id="timer">02:00:00</span></div>
         </div>
-    </header>
-
-    <!-- Contenido principal -->
-    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
-        <!-- Columna pregunta -->
-        <section id="questionPane" class="min-h-[60vh]">
-            <div id="card" class="rounded-2xl border shadow-sm p-5 sm:p-6">
-                <div class="flex items-start justify-between gap-4">
-                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">
-                        Pregunta <span id="currentIndexHuman">-</span> de <span id="totalCountHeader">-</span>
-                    </h2>
-                    <button id="markBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm"
-                        disabled>
-                        <span class="w-2.5 h-2.5 rounded-full bg-gray-300" id="markDot"></span>
-                        <span id="markLabel">Marcar para revisar (M)</span>
-                    </button>
-                </div>
-
-                <!-- Loading skeleton -->
-                <div id="loadingBox" class="mt-4">
-                    <div class="animate-pulse space-y-3">
-                        <div class="h-6 bg-gray-100 rounded w-2/3"></div>
-                        <div class="h-4 bg-gray-100 rounded w-11/12"></div>
-                        <div class="h-4 bg-gray-100 rounded w-4/5"></div>
-                        <div class="h-12 bg-gray-100 rounded"></div>
-                        <div class="h-12 bg-gray-100 rounded"></div>
-                        <div class="h-12 bg-gray-100 rounded"></div>
-                    </div>
-                </div>
-
-                <p id="questionText" class="mt-4 text-gray-900 text-lg leading-relaxed hidden"></p>
-                <form id="optionsForm" class="mt-6 space-y-3 hidden" aria-labelledby="questionText"></form>
-
-                <div id="alertArea" class="mt-4 hidden">
-                    <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-2 text-sm">
-                        <span id="alertText"></span>
-                    </div>
-                </div>
-
-                <!-- Navegación -->
-                <div class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <div class="text-xs text-gray-500">
-                        Atajos: 1–6 opciones, ←/P anterior, →/N siguiente, M marcar, G resumen (móvil).
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button id="prevBtn" class="px-4 py-2 rounded-lg border text-sm disabled:opacity-50"
-                            disabled>Anterior (P)</button>
-                        <button id="nextBtn" class="px-4 py-2 rounded-lg border text-sm" disabled>Siguiente (N)</button>
-                        <button id="submitBtn" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm"
-                            disabled>Enviar</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Resultados (se muestra tras enviar) -->
-            <div id="resultsCard" class="hidden mt-6 rounded-2xl border shadow-sm p-6">
-                <h3 class="text-xl font-semibold">Resultados</h3>
-                <p class="mt-2 text-gray-700">Tiempo total: <span id="finalTime">00:00:00</span></p>
-                <div class="mt-4 grid sm:grid-cols-3 gap-3">
-                    <div class="rounded-xl border p-4">
-                        <div class="text-sm text-gray-500">Aciertos</div>
-                        <div class="text-2xl font-semibold"><span id="scoreHits">0</span>/<span id="scoreTotal">0</span>
-                        </div>
-                    </div>
-                    <div class="rounded-xl border p-4">
-                        <div class="text-sm text-gray-500">% Correctas</div>
-                        <div class="text-2xl font-semibold"><span id="scorePct">0</span>%</div>
-                    </div>
-                    <div class="rounded-xl border p-4">
-                        <div class="text-sm text-gray-500">Nota (sobre 5.0)</div>
-                        <div class="text-2xl font-semibold"><span id="scoreFive">0.00</span></div>
-                    </div>
-                </div>
-                <div class="mt-6 flex items-center gap-3">
-                    <button id="reviewBtn" class="px-4 py-2 rounded-lg border text-sm">Revisar preguntas</button>
-                    <button id="resetBtn" class="px-4 py-2 rounded-lg text-sm border">Reiniciar</button>
-                </div>
-            </div>
-
-            <!-- Mensaje de error / vacío -->
-            <div id="emptyCard" class="hidden mt-6 rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 p-6">
-                <h3 class="font-semibold">No hay preguntas disponibles</h3>
-                <p class="mt-2 text-sm">No se pudieron cargar las preguntas. Revisa la URL del Web App y los permisos de
-                    despliegue.</p>
-            </div>
-        </section>
-
-        <!-- Resumen lateral -->
-        <aside id="sidebar"
-            class="lg:sticky lg:top-[84px] h-max rounded-2xl border shadow-sm p-5 sm:p-6 hidden lg:block">
-            <h3 class="text-base font-semibold">Resumen</h3>
-            <div class="mt-4 grid grid-cols-8 sm:grid-cols-10 gap-2" id="gridQuestions"
-                aria-label="Resumen de preguntas"></div>
-        </aside>
-    </main>
-
-    <!-- Modal de confirmación -->
-    <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center">
-        <div class="absolute inset-0 bg-black/30"></div>
-        <div class="relative bg-white w-[92vw] max-w-md rounded-2xl shadow-xl p-5 sm:p-6">
-            <h4 class="text-lg font-semibold">Enviar evaluación</h4>
-            <p class="mt-2 text-gray-700">
-                Te faltan <span id="missingCount">0</span> preguntas por responder. ¿Deseas enviar de todas formas?
-            </p>
-            <div class="mt-5 flex items-center justify-end gap-3">
-                <button id="cancelSubmitBtn" class="px-4 py-2 rounded-lg border text-sm">Cancelar</button>
-                <button id="confirmSubmitBtn" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm">Enviar
-                    ahora</button>
-            </div>
+        <div class="mt-2 h-2 w-full bg-gray-100 rounded-full overflow-hidden" aria-label="Barra de progreso">
+          <div id="progressBar" class="h-full bg-gray-900 w-0 transition-[width] duration-300"></div>
         </div>
+      </div>
+      <button id="toggleSidebarBtn" class="sm:hidden shrink-0 px-3 py-2 rounded-lg border text-sm" aria-expanded="false" aria-controls="sidebar">Resumen</button>
     </div>
+  </header>
 
-    <script>
-        // ============================
-        // CONFIG
-        // ============================
-        const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwgySKLgwzNvP3P-UQBdTeJoRg_dvXvTj0PSvsuJVMxeor5BkEZwE7MHGsMaZx9zxEk/exec';
+  <!-- Contenido principal -->
+  <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
+    <!-- Columna pregunta -->
+    <section id="questionPane" class="min-h-[60vh]">
+      <div id="card" class="rounded-2xl border shadow-sm p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-4">
+          <h2 class="text-base sm:text-lg font-semibold text-gray-900">
+            Pregunta <span id="currentIndexHuman">-</span> de <span id="totalCountHeader">-</span>
+          </h2>
+          <button id="markBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm" disabled>
+            <span class="w-2.5 h-2.5 rounded-full bg-gray-300" id="markDot"></span>
+            <span id="markLabel">Marcar para revisar (M)</span>
+          </button>
+        </div>
 
-        function buildRequestUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const params = new URLSearchParams();
+        <!-- Loading skeleton -->
+        <div id="loadingBox" class="mt-4">
+          <div class="animate-pulse space-y-3">
+            <div class="h-6 bg-gray-100 rounded w-2/3"></div>
+            <div class="h-4 bg-gray-100 rounded w-11/12"></div>
+            <div class="h-4 bg-gray-100 rounded w-4/5"></div>
+            <div class="h-12 bg-gray-100 rounded"></div>
+            <div class="h-12 bg-gray-100 rounded"></div>
+            <div class="h-12 bg-gray-100 rounded"></div>
+          </div>
+        </div>
 
-            params.set('action', 'get_questions');        // 👈 explícito
-            params.set('limit', urlParams.get('limit') || '15');
-            params.set('balance', urlParams.get('balance') ?? '1');
-            params.set('shuffleOptions', urlParams.get('shuffleOptions') ?? '1');
-            params.set('shuffleQuestions', urlParams.get('shuffleQuestions') ?? '1');
-            params.set('activeOnly', urlParams.get('activeOnly') ?? '1');
-            if (urlParams.get('categories')) params.set('categories', urlParams.get('categories'));
+        <p id="questionText" class="mt-4 text-gray-900 text-lg leading-relaxed hidden"></p>
+        <form id="optionsForm" class="mt-6 space-y-3 hidden" aria-labelledby="questionText"></form>
 
-            const full = WEBAPP_URL + '?' + params.toString();
-            console.log('[REQ] URL construida:', full);
-            return full;
-        }
+        <div id="alertArea" class="mt-4 hidden">
+          <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-2 text-sm">
+            <span id="alertText"></span>
+          </div>
+        </div>
 
+        <!-- Navegación -->
+        <div class="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div class="text-xs text-gray-500">
+            Atajos: 1–6 opciones, ←/P anterior, →/N siguiente, M marcar, G resumen (móvil).
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="prevBtn" class="px-4 py-2 rounded-lg border text-sm disabled:opacity-50" disabled>Anterior (P)</button>
+            <button id="nextBtn" class="px-4 py-2 rounded-lg border text-sm" disabled>Siguiente (N)</button>
+            <button id="submitBtn" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm" disabled>Enviar</button>
+          </div>
+        </div>
+      </div>
 
-        // =========================================
-        // Estado
-        // =========================================
-        let q = [];
-        let currentIndex = 0;
-        const total = () => q.length;
+      <!-- Resultados -->
+      <div id="resultsCard" class="hidden mt-6 rounded-2xl border shadow-sm p-6">
+        <h3 class="text-xl font-semibold">Resultados</h3>
+        <p class="mt-2 text-gray-700">Tiempo total: <span id="finalTime">00:00:00</span></p>
+        <div class="mt-4 grid sm:grid-cols-3 gap-3">
+          <div class="rounded-xl border p-4">
+            <div class="text-sm text-gray-500">Aciertos</div>
+            <div class="text-2xl font-semibold"><span id="scoreHits">0</span>/<span id="scoreTotal">0</span></div>
+          </div>
+          <div class="rounded-xl border p-4">
+            <div class="text-sm text-gray-500">% Correctas</div>
+            <div class="text-2xl font-semibold"><span id="scorePct">0</span>%</div>
+          </div>
+          <div class="rounded-xl border p-4">
+            <div class="text-sm text-gray-500">Nota (sobre 5.0)</div>
+            <div class="text-2xl font-semibold"><span id="scoreFive">0.00</span></div>
+          </div>
+        </div>
+        <div class="mt-6 flex items-center gap-3">
+          <button id="reviewBtn" class="px-4 py-2 rounded-lg border text-sm">Revisar preguntas</button>
+          <button id="resetBtn" class="px-4 py-2 rounded-lg text-sm border">Reiniciar</button>
+        </div>
+      </div>
 
-        const requestUrl = () => buildRequestUrl();
-        const examKey = () => 'exam:' + btoa(requestUrl());
-        const keyAns = () => examKey() + ':answers';
-        const keyMark = () => examKey() + ':marked';
-        const keyStart = () => examKey() + ':startTime';
+      <!-- Mensaje de error / vacío -->
+      <div id="emptyCard" class="hidden mt-6 rounded-2xl border border-rose-200 bg-rose-50 text-rose-900 p-6">
+        <h3 class="font-semibold">No hay preguntas disponibles</h3>
+        <p class="mt-2 text-sm">No se pudieron cargar las preguntas. Revisa la URL del Web App y los permisos de despliegue.</p>
+      </div>
+    </section>
 
-        let answers = {};
-        let marked = {};
-        let startTime = 0;
-        let timerHandle = null;
+    <!-- Resumen lateral -->
+    <aside id="sidebar" class="lg:sticky lg:top-[84px] h-max rounded-2xl border shadow-sm p-5 sm:p-6 hidden lg:block">
+      <h3 class="text-base font-semibold">Resumen</h3>
+      <div class="mt-4 grid grid-cols-8 sm:grid-cols-10 gap-2" id="gridQuestions" aria-label="Resumen de preguntas"></div>
+    </aside>
+  </main>
 
-        // =========================================
-        // Utils
-        // =========================================
-        const $ = (sel) => document.querySelector(sel);
-        const fmtTime = (ms) => {
-            const s = Math.floor(ms / 1000);
-            const h = String(Math.floor(s / 3600)).padStart(2, '0');
-            const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-            const sc = String(s % 60).padStart(2, '0');
-            return `${h}:${m}:${sc}`;
-        };
-        const showAlert = (msg) => {
-            $("#alertText").textContent = msg;
-            $("#alertArea").classList.remove("hidden");
-            setTimeout(() => $("#alertArea").classList.add("hidden"), 2000);
-        };
-        const saveState = () => {
-            localStorage.setItem(keyAns(), JSON.stringify(answers));
-            localStorage.setItem(keyMark(), JSON.stringify(marked));
-        };
-        const answeredCount = () => Object.keys(answers).length;
+  <!-- Modal de confirmación -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/30"></div>
+    <div class="relative bg-white w-[92vw] max-w-md rounded-2xl shadow-xl p-5 sm:p-6">
+      <h4 class="text-lg font-semibold">Enviar evaluación</h4>
+      <p class="mt-2 text-gray-700">
+        Te faltan <span id="missingCount">0</span> preguntas por responder. ¿Deseas enviar de todas formas?
+      </p>
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button id="cancelSubmitBtn" class="px-4 py-2 rounded-lg border text-sm">Cancelar</button>
+        <button id="confirmSubmitBtn" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm">Enviar ahora</button>
+      </div>
+    </div>
+  </div>
 
-        // =========================================
-        // Carga con fetch y fallback JSONP
-        // =========================================
-        async function loadQuestions() {
-            const url = requestUrl() + '&_=' + Date.now(); // evitar cache
-            console.log('[REQ] intentando fetch:', url);
-            const t0 = performance.now();
+  <script>
+    // ============================
+    // CONFIG
+    // ============================
+    const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwgySKLgwzNvP3P-UQBdTeJoRg_dvXvTj0PSvsuJVMxeor5BkEZwE7MHGsMaZx9zxEk/exec';
 
-            try {
-                const res = await fetch(url, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    redirect: 'follow',
-                    credentials: 'omit'
-                });
+    // NUEVO: límite fijo de 2 horas en el front
+    const TIME_LIMIT_MS = 2 * 60 * 60 * 1000;
 
-                const text = await res.text();
-                console.log('[RES] status:', res.status, res.statusText);
-                console.log('[RES] headers content-type:', res.headers.get('content-type'));
-                console.log('[RES] body(0..200):', text.slice(0, 200));
+    function buildRequestUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams();
 
-                if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 120)}`);
-                if (text.trim().startsWith('<')) throw new Error('HTML recibido (CORS/login). Paso a JSONP.');
+      params.set('action', 'get_questions');
+      params.set('limit', urlParams.get('limit') || '15');
+      params.set('balance', urlParams.get('balance') ?? '1');
+      params.set('shuffleOptions', urlParams.get('shuffleOptions') ?? '1');
+      params.set('shuffleQuestions', urlParams.get('shuffleQuestions') ?? '1');
+      params.set('activeOnly', urlParams.get('activeOnly') ?? '1');
+      if (urlParams.get('categories')) params.set('categories', urlParams.get('categories'));
 
-                const data = JSON.parse(text);
-                console.log('[JSON] parseado en', Math.round(performance.now() - t0) + 'ms:', data);
-                return hydrateFromPayload(data);
-
-            } catch (err) {
-                console.warn('[FETCH] fallo o CORS → fallback JSONP. Motivo:', err.message);
-                return loadQuestionsJSONP();
-            }
-        }
-
-
-        function loadQuestionsJSONP() {
-  const cbName = '__qs_cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
-  const url = requestUrl() + '&callback=' + cbName + '&_=' + Date.now();
-  console.log('[JSONP] usando callback:', cbName, '→', url);
-
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    let done = false;
-
-    window[cbName] = (data) => {
-      if (done) return;
-      done = true;
-      console.log('[JSONP] payload recibido:', data);
-      cleanup();
-      resolve(hydrateFromPayload(data));
-    };
-
-    function cleanup() {
-      try { delete window[cbName]; } catch(_) {}
-      if (s && s.parentNode) s.parentNode.removeChild(s);
+      const full = WEBAPP_URL + '?' + params.toString();
+      console.log('[REQ] URL construida:', full);
+      return full;
     }
 
-    s.src = url;
-    s.onerror = () => {
-      if (!done){ done = true; cleanup(); console.error('[JSONP] error de carga'); reject(new Error('JSONP error')); }
+    // =========================================
+    // Estado
+    // =========================================
+    let q = [];
+    let meta = null; // NUEVO: guardamos meta para enviar al backend
+    let currentIndex = 0;
+    const total = () => q.length;
+
+    const requestUrl = () => buildRequestUrl();
+    const examKey = () => 'exam:' + btoa(requestUrl());
+    const keyAns = () => examKey() + ':answers';
+    const keyMark = () => examKey() + ':marked';
+    const keyStart = () => examKey() + ':startTime';
+
+    let answers = {};
+    let marked = {};
+    let startTime = 0;
+    let deadline = 0; // NUEVO
+    let timerHandle = null;
+    let submitted = false; // NUEVO
+
+    // =========================================
+    // Utils
+    // =========================================
+    const $ = (sel) => document.querySelector(sel);
+    const fmtTime = (ms) => {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sc = String(s % 60).padStart(2, '0');
+      return `${h}:${m}:${sc}`;
     };
-    document.body.appendChild(s);
+    const showAlert = (msg) => {
+      $("#alertText").textContent = msg;
+      $("#alertArea").classList.remove("hidden");
+      setTimeout(() => $("#alertArea").classList.add("hidden"), 2000);
+    };
+    const saveState = () => {
+      localStorage.setItem(keyAns(), JSON.stringify(answers));
+      localStorage.setItem(keyMark(), JSON.stringify(marked));
+    };
+    const answeredCount = () => Object.keys(answers).length;
 
-    setTimeout(() => {
-      if (!done){ done = true; cleanup(); console.error('[JSONP] timeout'); reject(new Error('JSONP timeout')); }
-    }, 10000);
-  }).catch(err => {
-    console.error('[JSONP] también falló:', err);
-    $("#loadingBox").classList.add("hidden");
-    $("#emptyCard").classList.remove("hidden");
-    $("#emptyCard").querySelector('p').textContent =
-      "No se pudieron cargar las preguntas (CORS/JSONP). Revisa permisos y URL /exec.";
-  });
-}
+    // =========================================
+    // Carga con fetch y fallback JSONP
+    // =========================================
+    async function loadQuestions() {
+      const url = requestUrl() + '&_=' + Date.now(); // evitar cache
+      console.log('[REQ] intentando fetch:', url);
+      const t0 = performance.now();
 
-       function hydrateFromPayload(data) {
-  console.log('[HYDRATE] payload completo:', data);
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          redirect: 'follow',
+          credentials: 'omit'
+        });
 
-  // Si el servidor devolvió error estructurado, muéstralo
-  if (data && data.success === false) {
-    console.error('[HYDRATE] error del servidor:', data.error);
-    $("#loadingBox").classList.add("hidden");
-    $("#emptyCard").classList.remove("hidden");
-    $("#emptyCard").querySelector('p').textContent =
-      "Error del servidor: " + (data.error || 'desconocido');
-    return;
-  }
+        const text = await res.text();
+        console.log('[RES] status:', res.status, res.statusText);
+        console.log('[RES] headers content-type:', res.headers.get('content-type'));
+        console.log('[RES] body(0..200):', text.slice(0, 200));
 
-  if (!data || !Array.isArray(data.questions)) {
-    console.warn('[HYDRATE] payload sin questions válido');
-    $("#loadingBox").classList.add("hidden");
-    $("#emptyCard").classList.remove("hidden");
-    $("#emptyCard").querySelector('p').textContent =
-      "Respuesta inválida del Web App (sin questions). Revisa Apps Script.";
-    return;
-  }
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 120)}`);
+        if (text.trim().startsWith('<')) throw new Error('HTML recibido (CORS/login). Paso a JSONP.');
 
-  console.log('[HYDRATE] meta:', data.meta);
-  console.log('[HYDRATE] cantidad de preguntas:', data.questions.length);
+        const data = JSON.parse(text);
+        console.log('[JSON] parseado en', Math.round(performance.now() - t0) + 'ms:', data);
+        return hydrateFromPayload(data);
 
-  if (!data.questions.length) {
-    $("#loadingBox").classList.add("hidden");
-    $("#emptyCard").classList.remove("hidden");
-    const msg = data.meta && data.meta.total_available === 0
-      ? 'No hay preguntas disponibles con esos filtros.'
-      : 'No se seleccionaron preguntas. Revisa categorías/activo/balance.';
-    $("#emptyCard").querySelector('p').textContent = msg;
-    return;
-  }
+      } catch (err) {
+        console.warn('[FETCH] fallo o CORS → fallback JSONP. Motivo:', err.message);
+        return loadQuestionsJSONP();
+      }
+    }
 
-  q = data.questions.map(it => ({
-    id: it.id, text: it.text, category: it.category,
-    options: it.options.map(o => ({ id: o.id, text: o.text })),
-    correctOptionId: it.correctOptionId
-  }));
-  console.log('[HYDRATE] primeras 2 preguntas:', q.slice(0,2));
+    function loadQuestionsJSONP() {
+      const cbName = '__qs_cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+      const url = requestUrl() + '&callback=' + cbName + '&_=' + Date.now();
+      console.log('[JSONP] usando callback:', cbName, '→', url);
 
-  // estado
-  answers = JSON.parse(localStorage.getItem(keyAns()) || "{}");
-  marked  = JSON.parse(localStorage.getItem(keyMark()) || "{}");
-  startTime = parseInt(localStorage.getItem(keyStart()) || "0", 10);
-  if (!startTime) { startTime = Date.now(); localStorage.setItem(keyStart(), String(startTime)); }
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        let done = false;
 
-  // habilitar UI
-  $("#markBtn").disabled = $("#prevBtn").disabled = $("#nextBtn").disabled = $("#submitBtn").disabled = false;
-  $("#loadingBox").classList.add("hidden");
-  $("#questionText").classList.remove("hidden");
-  $("#optionsForm").classList.remove("hidden");
+        window[cbName] = (data) => {
+          if (done) return;
+          done = true;
+          console.log('[JSONP] payload recibido:', data);
+          cleanup();
+          resolve(hydrateFromPayload(data));
+        };
 
-  $("#totalCount").textContent = String(total());
-  $("#totalCountHeader").textContent = String(total());
-
-  bindEvents();
-  startTimer();
-  renderQuestion();
-  updateTopMeta();
-
-  if (window.innerWidth >= 1024) $("#sidebar").classList.remove("hidden");
-}
-
-        // =========================================
-        // Render y navegación (igual que antes)
-        // =========================================
-        function renderSidebar() {
-            const grid = document.getElementById("gridQuestions");
-            grid.innerHTML = "";
-            for (let i = 0; i < total(); i++) {
-                const qi = q[i];
-                const isAnswered = !!answers[qi.id];
-                const isMarked = !!marked[qi.id];
-
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className =
-                    "relative aspect-square rounded-lg text-xs flex items-center justify-center border hover:border-gray-900 transition " +
-                    (isMarked
-                        ? "bg-amber-400 border-amber-400 text-gray-900"
-                        : isAnswered
-                            ? "bg-emerald-500 border-emerald-500 text-white"
-                            : "bg-gray-100 border-gray-200 text-gray-700");
-
-                if (i === currentIndex) btn.classList.add("ring-2", "ring-gray-900");
-                btn.textContent = i + 1;
-                btn.setAttribute("aria-label", `Ir a la pregunta ${i + 1}`);
-                btn.addEventListener("click", () => {
-                    gotoIndex(i);
-                    if (window.innerWidth < 1024) toggleSidebar(false);
-                });
-                grid.appendChild(btn);
-            }
+        function cleanup() {
+          try { delete window[cbName]; } catch(_) {}
+          if (s && s.parentNode) s.parentNode.removeChild(s);
         }
 
-        function renderQuestion() {
-            const item = q[currentIndex];
-            document.getElementById("currentIndexHuman").textContent = String(currentIndex + 1);
-            document.getElementById("totalCountHeader").textContent = String(total());
-            document.getElementById("questionText").textContent = item.text;
+        s.src = url;
+        s.onerror = () => {
+          if (!done){ done = true; cleanup(); console.error('[JSONP] error de carga'); reject(new Error('JSONP error')); }
+        };
+        document.body.appendChild(s);
 
-            const isMarked = !!marked[item.id];
-            document.getElementById("markDot").className = "w-2.5 h-2.5 rounded-full " + (isMarked ? "bg-amber-400" : "bg-gray-300");
-            document.getElementById("markLabel").textContent = isMarked ? "Marcada (M)" : "Marcar para revisar (M)";
+        setTimeout(() => {
+          if (!done){ done = true; cleanup(); console.error('[JSONP] timeout'); reject(new Error('JSONP timeout')); }
+        }, 10000);
+      }).catch(err => {
+        console.error('[JSONP] también falló:', err);
+        $("#loadingBox").classList.add("hidden");
+        $("#emptyCard").classList.remove("hidden");
+        $("#emptyCard").querySelector('p').textContent =
+          "No se pudieron cargar las preguntas (CORS/JSONP). Revisa permisos y URL /exec.";
+      });
+    }
 
-            const form = document.getElementById("optionsForm");
-            form.innerHTML = "";
+    function hydrateFromPayload(data) {
+      console.log('[HYDRATE] payload completo:', data);
 
-            item.options.forEach((opt, idx) => {
-                const optId = `q${currentIndex}_opt_${opt.id}`;
+      if (data && data.success === false) {
+        console.error('[HYDRATE] error del servidor:', data.error);
+        $("#loadingBox").classList.add("hidden");
+        $("#emptyCard").classList.remove("hidden");
+        $("#emptyCard").querySelector('p').textContent =
+          "Error del servidor: " + (data.error || 'desconocido');
+        return;
+      }
+      if (!data || !Array.isArray(data.questions)) {
+        console.warn('[HYDRATE] payload sin questions válido');
+        $("#loadingBox").classList.add("hidden");
+        $("#emptyCard").classList.remove("hidden");
+        $("#emptyCard").querySelector('p').textContent =
+          "Respuesta inválida del Web App (sin questions). Revisa Apps Script.";
+        return;
+      }
+      if (!data.questions.length) {
+        $("#loadingBox").classList.add("hidden");
+        $("#emptyCard").classList.remove("hidden");
+        const msg = data.meta && data.meta.total_available === 0
+          ? 'No hay preguntas disponibles con esos filtros.'
+          : 'No se seleccionaron preguntas. Revisa categorías/activo/balance.';
+        $("#emptyCard").querySelector('p').textContent = msg;
+        return;
+      }
 
-                const label = document.createElement("label");
-                label.htmlFor = optId;
-                label.className = "flex gap-3 items-start rounded-xl border px-4 py-3 cursor-pointer hover:border-gray-900 transition";
+      meta = data.meta || null; // NUEVO
+      q = data.questions.map(it => ({
+        id: it.id, text: it.text, category: it.category,
+        options: it.options.map(o => ({ id: o.id, text: o.text })),
+        correctOptionId: it.correctOptionId
+      }));
+      console.log('[HYDRATE] primeras 2 preguntas:', q.slice(0,2));
 
-                const input = document.createElement("input");
-                input.type = "radio";
-                input.name = "option";
-                input.id = optId;
-                input.value = opt.id;
-                input.className = "mt-1 h-4 w-4 shrink-0";
-                input.checked = answers[item.id] === opt.id;
+      // estado
+      answers = JSON.parse(localStorage.getItem(keyAns()) || "{}");
+      marked  = JSON.parse(localStorage.getItem(keyMark()) || "{}");
+      startTime = parseInt(localStorage.getItem(keyStart()) || "0", 10);
+      if (!startTime) { startTime = Date.now(); localStorage.setItem(keyStart(), String(startTime)); }
+      deadline = startTime + TIME_LIMIT_MS; // NUEVO
 
-                const text = document.createElement("div");
-                text.className = "text-gray-900";
-                text.innerHTML = `<div class="font-medium">${String.fromCharCode(65 + idx)}.</div><div>${opt.text}</div>`;
+      // habilitar UI
+      $("#markBtn").disabled = $("#prevBtn").disabled = $("#nextBtn").disabled = $("#submitBtn").disabled = false;
+      $("#loadingBox").classList.add("hidden");
+      $("#questionText").classList.remove("hidden");
+      $("#optionsForm").classList.remove("hidden");
 
-                label.prepend(input);
-                label.appendChild(text);
-                form.appendChild(label);
+      $("#totalCount").textContent = String(total());
+      $("#totalCountHeader").textContent = String(total());
 
-                input.addEventListener("change", () => {
-                    answers[item.id] = opt.id;
-                    saveState();
-                    updateTopMeta();
-                    renderSidebar();
-                });
-            });
+      bindEvents();
+      startTimer();
+      renderQuestion();
+      updateTopMeta();
 
-            document.getElementById("prevBtn").disabled = currentIndex === 0;
-            document.getElementById("nextBtn").disabled = currentIndex === total() - 1;
-            renderSidebar();
+      if (window.innerWidth >= 1024) $("#sidebar").classList.remove("hidden");
+    }
+
+    // =========================================
+    // Render y navegación
+    // =========================================
+    function renderSidebar() {
+      const grid = document.getElementById("gridQuestions");
+      grid.innerHTML = "";
+      for (let i = 0; i < total(); i++) {
+        const qi = q[i];
+        const isAnswered = !!answers[qi.id];
+        const isMarked = !!marked[qi.id];
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          "relative aspect-square rounded-lg text-xs flex items-center justify-center border hover:border-gray-900 transition " +
+          (isMarked
+            ? "bg-amber-400 border-amber-400 text-gray-900"
+            : isAnswered
+              ? "bg-emerald-500 border-emerald-500 text-white"
+              : "bg-gray-100 border-gray-200 text-gray-700");
+
+        if (i === currentIndex) btn.classList.add("ring-2", "ring-gray-900");
+        btn.textContent = i + 1;
+        btn.setAttribute("aria-label", `Ir a la pregunta ${i + 1}`);
+        btn.addEventListener("click", () => {
+          gotoIndex(i);
+          if (window.innerWidth < 1024) toggleSidebar(false);
+        });
+        grid.appendChild(btn);
+      }
+    }
+
+    function renderQuestion() {
+      const item = q[currentIndex];
+      $("#currentIndexHuman").textContent = String(currentIndex + 1);
+      $("#totalCountHeader").textContent = String(total());
+      $("#questionText").textContent = item.text;
+
+      const isMarked = !!marked[item.id];
+      $("#markDot").className = "w-2.5 h-2.5 rounded-full " + (isMarked ? "bg-amber-400" : "bg-gray-300");
+      $("#markLabel").textContent = isMarked ? "Marcada (M)" : "Marcar para revisar (M)";
+
+      const form = $("#optionsForm");
+      form.innerHTML = "";
+
+      item.options.forEach((opt, idx) => {
+        const optId = `q${currentIndex}_opt_${opt.id}`;
+
+        const label = document.createElement("label");
+        label.htmlFor = optId;
+        label.className = "flex gap-3 items-start rounded-xl border px-4 py-3 cursor-pointer hover:border-gray-900 transition";
+
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "option";
+        input.id = optId;
+        input.value = opt.id;
+        input.className = "mt-1 h-4 w-4 shrink-0";
+        input.checked = answers[item.id] === opt.id;
+
+        const text = document.createElement("div");
+        text.className = "text-gray-900";
+        text.innerHTML = `<div class="font-medium">${String.fromCharCode(65 + idx)}.</div><div>${opt.text}</div>`;
+
+        label.prepend(input);
+        label.appendChild(text);
+        form.appendChild(label);
+
+        input.addEventListener("change", () => {
+          answers[item.id] = opt.id;
+          saveState();
+          updateTopMeta();
+          renderSidebar();
+        });
+      });
+
+      $("#prevBtn").disabled = currentIndex === 0;
+      $("#nextBtn").disabled = currentIndex === total() - 1;
+      renderSidebar();
+    }
+
+    function updateTopMeta() {
+      $("#answeredCount").textContent = String(answeredCount());
+      $("#totalCount").textContent = String(total());
+      const pct = total() ? Math.round((answeredCount() / total()) * 100) : 0;
+      $("#progressBar").style.width = `${pct}%`;
+    }
+
+    function gotoIndex(i) {
+      currentIndex = Math.max(0, Math.min(total() - 1, i));
+      renderQuestion();
+      updateTopMeta();
+    }
+    function nextQuestion(validated = true) {
+      const item = q[currentIndex];
+      if (validated && !answers[item.id]) { showAlert("Selecciona una opción antes de continuar."); return; }
+      if (currentIndex < total() - 1) gotoIndex(currentIndex + 1);
+    }
+    function prevQuestion() { if (currentIndex > 0) gotoIndex(currentIndex - 1); }
+
+    function toggleMark() {
+      const item = q[currentIndex];
+      if (marked[item.id]) delete marked[item.id]; else marked[item.id] = true;
+      saveState(); renderQuestion();
+    }
+
+    function computeScore() {
+      let hits = 0;
+      for (const item of q) if (answers[item.id] === item.correctOptionId) hits++;
+      return { hits, total: total() };
+    }
+
+    function openConfirm() {
+      const missing = total() - answeredCount();
+      $("#missingCount").textContent = String(missing);
+      $("#confirmModal").classList.remove("hidden");
+      $("#confirmModal").classList.add("flex");
+    }
+    function closeConfirm() {
+      $("#confirmModal").classList.add("hidden");
+      $("#confirmModal").classList.remove("flex");
+    }
+
+    async function submitNow(reason = 'manual') {
+      if (submitted) return; // evitar doble envío
+      submitted = true;
+
+      closeConfirm();
+      if (timerHandle) clearInterval(timerHandle);
+
+      const elapsed = Date.now() - startTime;
+      $("#finalTime").textContent = fmtTime(elapsed);
+
+      const { hits, total } = computeScore();
+      const pct = total ? Math.round((hits / total) * 100) : 0;
+      const five = total ? (5 * hits / total) : 0;
+
+      $("#scoreHits").textContent = String(hits);
+      $("#scoreTotal").textContent = String(total);
+      $("#scorePct").textContent = String(pct);
+      $("#scoreFive").textContent = five.toFixed(2);
+      $("#resultsCard").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Enviar al backend
+      try {
+        await sendResultsToServer({
+          reason,
+          elapsed,
+          hits,
+          total,
+          pct,
+          five
+        });
+      } catch (err) {
+        console.error('[submit] fallo guardando resultados:', err);
+      }
+    }
+
+    function resetAll() {
+      localStorage.removeItem(keyAns());
+      localStorage.removeItem(keyMark());
+      localStorage.removeItem(keyStart());
+      answers = {}; marked = {};
+      startTime = Date.now(); localStorage.setItem(keyStart(), String(startTime));
+      deadline = startTime + TIME_LIMIT_MS;
+      submitted = false;
+      $("#resultsCard").classList.add("hidden");
+      gotoIndex(0); startTimer(); updateTopMeta();
+    }
+
+    function startTimer() {
+      const tick = () => {
+        const now = Date.now();
+        const remain = Math.max(0, deadline - now);
+        $("#timer").textContent = fmtTime(remain);
+
+        if (remain <= 0) {
+          // Auto envía por límite
+          showAlert("Tiempo agotado. Enviando tus respuestas…");
+          submitNow('timeout');
+          clearInterval(timerHandle);
         }
+      };
+      tick();
+      timerHandle = setInterval(tick, 1000);
+    }
 
-        function updateTopMeta() {
-            document.getElementById("answeredCount").textContent = String(answeredCount());
-            document.getElementById("totalCount").textContent = String(total());
-            const pct = total() ? Math.round((answeredCount() / total()) * 100) : 0;
-            document.getElementById("progressBar").style.width = `${pct}%`;
+    function toggleSidebar(forceState = null) {
+      const el = $("#sidebar");
+      const btn = $("#toggleSidebarBtn");
+      const isOpen = !el.classList.contains("hidden");
+      const next = forceState === null ? !isOpen : forceState;
+      if (next) { el.classList.remove("hidden"); btn.setAttribute("aria-expanded", "true"); }
+      else { el.classList.add("hidden"); btn.setAttribute("aria-expanded", "false"); }
+    }
+
+    function bindEvents() {
+      $("#prevBtn").addEventListener("click", (e) => { e.preventDefault(); prevQuestion(); });
+      $("#nextBtn").addEventListener("click", (e) => { e.preventDefault(); nextQuestion(true); });
+      $("#submitBtn").addEventListener("click", (e) => { e.preventDefault(); openConfirm(); });
+      $("#cancelSubmitBtn").addEventListener("click", (e) => { e.preventDefault(); closeConfirm(); });
+      $("#confirmSubmitBtn").addEventListener("click", (e) => { e.preventDefault(); submitNow('manual'); });
+      $("#markBtn").addEventListener("click", (e) => { e.preventDefault(); toggleMark(); });
+      $("#reviewBtn").addEventListener("click", (e) => { e.preventDefault(); $("#questionPane").scrollIntoView({ behavior: "smooth" }); });
+      $("#resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetAll(); });
+      $("#toggleSidebarBtn").addEventListener("click", () => toggleSidebar());
+
+      document.addEventListener("keydown", (e) => {
+        if (e.target.closest("input,textarea")) return;
+        const k = e.key.toLowerCase();
+        if (k === "arrowright" || k === "n") { e.preventDefault(); nextQuestion(true); }
+        if (k === "arrowleft" || k === "p") { e.preventDefault(); prevQuestion(); }
+        if (k === "m") { e.preventDefault(); toggleMark(); }
+        if (k === "g") { e.preventDefault(); toggleSidebar(); }
+        if (/[1-6]/.test(k)) {
+          const idx = parseInt(k, 10) - 1, item = q[currentIndex], opt = item.options[idx];
+          if (opt) { answers[item.id] = opt.id; saveState(); renderQuestion(); updateTopMeta(); }
         }
+      });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeConfirm(); });
+    }
 
-        function gotoIndex(i) {
-            currentIndex = Math.max(0, Math.min(total() - 1, i));
-            renderQuestion();
-            updateTopMeta();
+    // ===== NUEVO: envío de resultados al servidor =====
+    async function sendResultsToServer({ reason, elapsed, hits, total, pct, five }) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('userId') || '';
+
+      // Detalle por pregunta
+      const items = q.map(item => {
+        const selected = answers[item.id] || null;
+        const isCorrect = selected === item.correctOptionId;
+        return {
+          id: item.id,
+          category: item.category,
+          correct: item.correctOptionId,
+          selected,
+          isCorrect
+        };
+      });
+
+      const categories = Array.from(new Set(q.map(x => x.category)));
+
+      const payload = {
+        action: 'submit_results',
+        meta: meta || {},
+        examKey: examKey(),
+        userId,
+        submit_reason: reason,
+        total: total,
+        answered: answeredCount(),
+        marked: Object.keys(marked).length,
+        hits: hits,
+        pct: pct,
+        score_five: Number(five.toFixed(2)),
+        elapsed_ms: elapsed,
+        time_text: fmtTime(elapsed),
+        categories: categories,
+        client_version: 'v1.0',
+        details: {
+          items,
+          answers,                         // mapa pregunta -> opción elegida
+          correctMap: Object.fromEntries(q.map(x => [x.id, x.correctOptionId]))
         }
-        function nextQuestion(validated = true) {
-            const item = q[currentIndex];
-            if (validated && !answers[item.id]) { showAlert("Selecciona una opción antes de continuar."); return; }
-            if (currentIndex < total() - 1) gotoIndex(currentIndex + 1);
-        }
-        function prevQuestion() { if (currentIndex > 0) gotoIndex(currentIndex - 1); }
+      };
 
-        function toggleMark() {
-            const item = q[currentIndex];
-            if (marked[item.id]) delete marked[item.id]; else marked[item.id] = true;
-            saveState(); renderQuestion();
-        }
+      const res = await fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight
+        body: JSON.stringify(payload),
+        redirect: 'follow',
+        credentials: 'omit'
+      });
 
-        function computeScore() {
-            let hits = 0;
-            for (const item of q) if (answers[item.id] === item.correctOptionId) hits++;
-            return { hits, total: total() };
-        }
+      const txt = await res.text();
+      console.log('[submit_results] status:', res.status, txt.slice(0,200));
+      // No lanzamos error si no es 2xx, solo log
+    }
 
-        function openConfirm() {
-            const missing = total() - answeredCount();
-            document.getElementById("missingCount").textContent = String(missing);
-            document.getElementById("confirmModal").classList.remove("hidden");
-            document.getElementById("confirmModal").classList.add("flex");
-        }
-        function closeConfirm() {
-            document.getElementById("confirmModal").classList.add("hidden");
-            document.getElementById("confirmModal").classList.remove("flex");
-        }
-
-        function submitNow() {
-            closeConfirm();
-            if (timerHandle) clearInterval(timerHandle);
-            const elapsed = Date.now() - startTime;
-            document.getElementById("finalTime").textContent = fmtTime(elapsed);
-
-            const { hits, total } = computeScore();
-            const pct = total ? Math.round((hits / total) * 100) : 0;
-            const five = total ? (5 * hits / total) : 0;
-
-            document.getElementById("scoreHits").textContent = String(hits);
-            document.getElementById("scoreTotal").textContent = String(total);
-            document.getElementById("scorePct").textContent = String(pct);
-            document.getElementById("scoreFive").textContent = five.toFixed(2);
-
-            document.getElementById("resultsCard").classList.remove("hidden");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        }
-
-        function resetAll() {
-            localStorage.removeItem(keyAns());
-            localStorage.removeItem(keyMark());
-            localStorage.removeItem(keyStart());
-            answers = {}; marked = {};
-            startTime = Date.now(); localStorage.setItem(keyStart(), String(startTime));
-            document.getElementById("resultsCard").classList.add("hidden");
-            gotoIndex(0); startTimer(); updateTopMeta();
-        }
-
-        function startTimer() {
-            const tick = () => document.getElementById("timer").textContent = fmtTime(Date.now() - startTime);
-            tick(); timerHandle = setInterval(tick, 1000);
-        }
-
-        function toggleSidebar(forceState = null) {
-            const el = document.getElementById("sidebar");
-            const btn = document.getElementById("toggleSidebarBtn");
-            const isOpen = !el.classList.contains("hidden");
-            const next = forceState === null ? !isOpen : forceState;
-            if (next) { el.classList.remove("hidden"); btn.setAttribute("aria-expanded", "true"); }
-            else { el.classList.add("hidden"); btn.setAttribute("aria-expanded", "false"); }
-        }
-
-        function bindEvents() {
-            document.getElementById("prevBtn").addEventListener("click", (e) => { e.preventDefault(); prevQuestion(); });
-            document.getElementById("nextBtn").addEventListener("click", (e) => { e.preventDefault(); nextQuestion(true); });
-            document.getElementById("submitBtn").addEventListener("click", (e) => { e.preventDefault(); openConfirm(); });
-            document.getElementById("cancelSubmitBtn").addEventListener("click", (e) => { e.preventDefault(); closeConfirm(); });
-            document.getElementById("confirmSubmitBtn").addEventListener("click", (e) => { e.preventDefault(); submitNow(); });
-            document.getElementById("markBtn").addEventListener("click", (e) => { e.preventDefault(); toggleMark(); });
-            document.getElementById("reviewBtn").addEventListener("click", (e) => { e.preventDefault(); document.getElementById("questionPane").scrollIntoView({ behavior: "smooth" }); });
-            document.getElementById("resetBtn").addEventListener("click", (e) => { e.preventDefault(); resetAll(); });
-            document.getElementById("toggleSidebarBtn").addEventListener("click", () => toggleSidebar());
-
-            document.addEventListener("keydown", (e) => {
-                if (e.target.closest("input,textarea")) return;
-                const k = e.key.toLowerCase();
-                if (k === "arrowright" || k === "n") { e.preventDefault(); nextQuestion(true); }
-                if (k === "arrowleft" || k === "p") { e.preventDefault(); prevQuestion(); }
-                if (k === "m") { e.preventDefault(); toggleMark(); }
-                if (k === "g") { e.preventDefault(); toggleSidebar(); }
-                if (/[1-6]/.test(k)) {
-                    const idx = parseInt(k, 10) - 1, item = q[currentIndex], opt = item.options[idx];
-                    if (opt) { answers[item.id] = opt.id; saveState(); renderQuestion(); updateTopMeta(); }
-                }
-            });
-            document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeConfirm(); });
-        }
-
-        // Init
-        (function init() { loadQuestions(); })();
-    </script>
+    // Init
+    (function init() { loadQuestions(); })();
+  </script>
 </body>
-
 </html>
